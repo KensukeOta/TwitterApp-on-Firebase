@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import styles from './Auth.module.css';
 import { auth, provider, storage } from '../firebase';
-import { signInWithPopup } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -16,13 +16,27 @@ import EmailIcon from '@mui/icons-material/Email';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { style } from '@mui/system';
 
 const theme = createTheme();
 
 const Auth: React.FC = () => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLogin, setIsLogin] = useState(true);
+
+  const signInEmail = async () => {
+    await signInWithEmailAndPassword(auth, email, password);
+  };
+
+  const signUpEmail = async () => {
+    await createUserWithEmailAndPassword(auth, email, password);
+  };
+  
   const signInGoogle = async () => {
     await signInWithPopup(auth, provider).catch((err: any) => alert(err.message));
   };
+
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
@@ -64,7 +78,7 @@ const Auth: React.FC = () => {
               <LockOutlinedIcon />
             </Avatar>
             <Typography component="h1" variant="h5">
-              Sign in
+              {isLogin ? "Login" : "Register"}
             </Typography>
             <Box component="form" noValidate onSubmit={handleSubmit} sx={{ mt: 1 }}>
               <TextField
@@ -76,6 +90,10 @@ const Auth: React.FC = () => {
                 name="email"
                 autoComplete="email"
                 autoFocus
+                value={email}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  setEmail(e.target.value);
+                }}
               />
               <TextField
                 margin="normal"
@@ -86,16 +104,46 @@ const Auth: React.FC = () => {
                 type="password"
                 id="password"
                 autoComplete="current-password"
+                value={password}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  setPassword(e.target.value);
+                }}
               />
               <Button
-                type="submit"
                 fullWidth
                 variant="contained"
                 sx={{ mt: 3, mb: 2 }}
+                startIcon={<EmailIcon />}
+                onClick={
+                  isLogin
+                    ? async () => {
+                        try {
+                          await signInEmail();
+                        } catch (err: any) {
+                          alert(err.message);
+                        }
+                      }
+                    : async () => {
+                        try {
+                          await signUpEmail();
+                        } catch (err: any) {
+                          alert(err.message);
+                        }
+                      }
+                }
               >
-                Sign In
+                {isLogin ? "Login" : "Register"}
               </Button>
-
+              <Grid container>
+                <Grid item xs>
+                  <span className={styles.login_reset}>Forgot password?</span>
+                </Grid>
+                <Grid item>
+                  <span onClick={() => setIsLogin(!isLogin)} className={styles.login_toggleMode}>
+                    {isLogin ? "Create new account ?" : "Back to login"}
+                  </span>
+                </Grid>
+              </Grid>
               <Button
                 fullWidth
                 variant="contained"
