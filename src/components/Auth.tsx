@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import styles from './Auth.module.css';
 import { auth, provider, storage } from '../firebase';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, updateProfile } from 'firebase/auth';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -17,33 +17,63 @@ import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { style } from '@mui/system';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { useRecoilState } from 'recoil';
+import { userInfo } from '../store/userInfo';
+import { IconButton } from '@mui/material';
 
 const theme = createTheme();
 
 const Auth: React.FC = () => {
+  const [user, setUser] = useRecoilState(userInfo);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("");
+  const [avatarImage, setAvatarImage] = useState<File | null>(null);
   const [isLogin, setIsLogin] = useState(true);
+
+  const onChangeImageHandler = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files![0]) {
+      setAvatarImage(e.target.files![0]);
+      e.target.value = "";
+    }
+  };
 
   const signInEmail = async () => {
     await signInWithEmailAndPassword(auth, email, password);
   };
 
   const signUpEmail = async () => {
-    await createUserWithEmailAndPassword(auth, email, password);
+    const authUser = await createUserWithEmailAndPassword(auth, email, password);
+    let url = "";
+    if (avatarImage) {
+      const S =
+        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+      const N = 16;
+      const randomChar = Array.from(crypto.getRandomValues(new Uint32Array(N)))
+        .map((n) => S[n % S.length])
+        .join("");
+      const fileName = randomChar + "_" + avatarImage.name;
+      //Firebase ver9 compliant
+      await uploadBytes(ref(storage, `avatars/${fileName}`), avatarImage);
+      url = await getDownloadURL(ref(storage, `avatars/${fileName}`));
+    }
+    if (authUser.user) {
+      await updateProfile(authUser.user, {
+        displayName: username,
+        photoURL: url,
+      });
+    }
+
+    setUser({
+      uid: authUser.user.uid,
+      displayName: username,
+      photoUrl: url,
+    })
   };
   
   const signInGoogle = async () => {
     await signInWithPopup(auth, provider).catch((err: any) => alert(err.message));
-  };
-
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    console.log({
-      email: data.get('email'),
-      password: data.get('password'),
-    });
   };
 
   return (
@@ -80,7 +110,47 @@ const Auth: React.FC = () => {
             <Typography component="h1" variant="h5">
               {isLogin ? "Login" : "Register"}
             </Typography>
-            <Box component="form" noValidate onSubmit={handleSubmit} sx={{ mt: 1 }}>
+            <form  noValidate>
+
+              {!isLogin && (
+                <>
+                  <TextField
+                    variant="outlined"
+                    margin="normal"
+                    required
+                    fullWidth
+                    id="username"
+                    label="Username"
+                    name="username"
+                    autoComplete="username"
+                    autoFocus
+                    value={username}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      setUsername(e.target.value);
+                    }}
+                  />
+                  <Box textAlign="center">
+                    <IconButton>
+                      <label>
+                        <AccountCircleIcon
+                          fontSize="large"
+                          className={
+                            avatarImage
+                              ? styles.login_addIconLoaded
+                              : styles.login_addIcon 
+                          }
+                        />
+                        <input
+                          className={styles.login_hiddenIcon}
+                          type="file"
+                          onChange={onChangeImageHandler}
+                        />
+                      </label>
+                    </IconButton>
+                  </Box>
+                </>
+                )}
+              
               <TextField
                 margin="normal"
                 required
@@ -110,6 +180,11 @@ const Auth: React.FC = () => {
                 }}
               />
               <Button
+                disabled={
+                  isLogin
+                    ? !email || password.length < 6
+                    : !username || !email || password.length < 6 || !avatarImage
+                }
                 fullWidth
                 variant="contained"
                 sx={{ mt: 3, mb: 2 }}
@@ -152,7 +227,7 @@ const Auth: React.FC = () => {
               >
                 SignIn with Google
               </Button>
-            </Box>
+            </form>
           </Box>
         </Grid>
       </Grid>
