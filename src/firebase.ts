@@ -1,4 +1,5 @@
 import { initializeApp } from "firebase/app";
+//Firebase ver9 compliant
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
@@ -12,8 +13,8 @@ const firebaseApp = initializeApp({
   messagingSenderId: process.env.REACT_APP_FIREBASE_SENDER_ID,
   appId: process.env.REACT_APP_FIREBASE_APP_ID,
 });
-
-export const db = getStorage(firebaseApp);
+//Firebase ver9 compliant
+export const storage = getStorage(firebaseApp);
 export const auth = getAuth(firebaseApp);
-export const storage = getFirestore(firebaseApp);
+export const db = getFirestore(firebaseApp);
 export const provider = new GoogleAuthProvider();
