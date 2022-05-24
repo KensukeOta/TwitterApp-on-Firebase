@@ -24,9 +24,48 @@ interface PROPS {
   username: string;
 }
 
+interface COMMENT {
+  id: string;
+  avatar: string;
+  text: string;
+  timestamp: any;
+  username: string;
+}
+
 const Post: FC<PROPS> = (props) => {
   const user = useRecoilValue(userInfo);
   const [comment, setComment] = useState("");
+  const [comments, setComments] = useState<COMMENT[]>([
+    {
+      id: "",
+      avatar: "",
+      text: "",
+      username: "",
+      timestamp: null,
+    },
+  ]);
+  const [openComments, setOpenComments] = useState(false);
+
+  useEffect(() => {
+    const q = query(
+      collection(db, "posts", props.postId, "comments"),
+      orderBy("timestamp", "desc")
+    );
+    const unSub = onSnapshot(q, (snapshot) => {
+      setComments(
+        snapshot.docs.map((doc) => ({
+          id: doc.id,
+          avatar: doc.data().avatar,
+          text: doc.data().text,
+          username: doc.data().username,
+          timestamp: doc.data().timestamp,
+        }))
+      );
+    });
+    return () => {
+      unSub();
+    };
+  }, [props.postId]);
 
   const newComment = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -64,28 +103,49 @@ const Post: FC<PROPS> = (props) => {
           </div>
         )}
 
-        <form onSubmit={newComment}>
-          <div className={styles.post_form}>
-            <input
-              className={styles.post_input}
-              type="text"
-              placeholder="Type new comment..."
-              value={comment}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setComment(e.target.value)
-              }
-            />
-            <button
-              disabled={!comment}
-              className={
-                comment ? styles.post_button : styles.post_buttonDisable
-              }
-              type="submit"
-            >
-              <SendIcon className={styles.post_sendIcon} />
-            </button>
-          </div>
-        </form>
+        <MessageIcon
+          className={styles.post_commentIcon}
+          onClick={() => setOpenComments(!openComments)}
+        />
+
+        {openComments && (
+          <>
+          {comments.map((com) => (
+            <div key={com.id} className={styles.post_comment}>
+              <Avatar src={com.avatar} />
+
+              <span className={styles.post_commentUser}>@{com.username}</span>
+              <span className={styles.post_commentText}>{com.text} </span>
+              <span className={styles.post_headerTime}>
+                {new Date(com.timestamp?.toDate()).toLocaleString()}
+              </span>
+            </div>
+          ))}
+
+          <form onSubmit={newComment}>
+            <div className={styles.post_form}>
+              <input
+                className={styles.post_input}
+                type="text"
+                placeholder="Type new comment..."
+                value={comment}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setComment(e.target.value)
+                }
+              />
+              <button
+                disabled={!comment}
+                className={
+                  comment ? styles.post_button : styles.post_buttonDisable
+                }
+                type="submit"
+              >
+                <SendIcon className={styles.post_sendIcon} />
+              </button>
+            </div>
+            </form>
+          </>
+        )}
       </div>
     </div>
   );
