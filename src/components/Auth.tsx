@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import styles from './Auth.module.css';
 import { auth, provider, storage } from '../firebase';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, updateProfile } from 'firebase/auth';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -16,11 +16,10 @@ import EmailIcon from '@mui/icons-material/Email';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import { style } from '@mui/system';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { useRecoilState } from 'recoil';
 import { userInfo } from '../store/userInfo';
-import { IconButton } from '@mui/material';
+import { IconButton, Modal } from '@mui/material';
 
 const theme = createTheme();
 
@@ -31,6 +30,21 @@ const Auth: React.FC = () => {
   const [username, setUsername] = useState("");
   const [avatarImage, setAvatarImage] = useState<File | null>(null);
   const [isLogin, setIsLogin] = useState(true);
+  const [openModal, setOpenModal] = React.useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+
+  const sendResetEmail = async (e: React.MouseEvent<HTMLElement>) => {
+    //Firebase ver9 compliant
+    await sendPasswordResetEmail(auth, resetEmail)
+      .then(() => {
+        setOpenModal(false);
+        setResetEmail("");
+      })
+      .catch((err) => {
+        alert(err.message);
+        setResetEmail("");
+      });
+  };
 
   const onChangeImageHandler = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files![0]) {
@@ -211,7 +225,7 @@ const Auth: React.FC = () => {
               </Button>
               <Grid container>
                 <Grid item xs>
-                  <span className={styles.login_reset}>Forgot password?</span>
+                  <span className={styles.login_reset} onClick={() => setOpenModal(true)}>Forgot password?</span>
                 </Grid>
                 <Grid item>
                   <span onClick={() => setIsLogin(!isLogin)} className={styles.login_toggleMode}>
@@ -229,6 +243,27 @@ const Auth: React.FC = () => {
                 SignIn with Google
               </Button>
             </form>
+            <Modal open={openModal} onClose={() => setOpenModal(false)}>
+              <div className={styles.modal}>
+                <div className={styles.login_modal}>
+                  <TextField
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                  type="email"
+                  name="email"
+                  label="Reset E-mail"
+                  value={resetEmail}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setResetEmail(e.target.value);
+                  }}
+                />
+                <IconButton onClick={sendResetEmail}>
+                  <SendIcon />
+                </IconButton>
+              </div>
+            </div>
+          </Modal>
           </Box>
         </Grid>
       </Grid>
