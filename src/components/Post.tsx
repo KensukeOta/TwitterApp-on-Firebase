@@ -12,6 +12,8 @@ import {
 import { Avatar } from "@mui/material";
 import MessageIcon from '@mui/icons-material/Message';
 import SendIcon from '@mui/icons-material/Send';
+import { useRecoilValue } from "recoil";
+import { userInfo } from "../store/userInfo";
 
 interface PROPS {
   postId: string;
@@ -23,6 +25,20 @@ interface PROPS {
 }
 
 const Post: FC<PROPS> = (props) => {
+  const user = useRecoilValue(userInfo);
+  const [comment, setComment] = useState("");
+
+  const newComment = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    addDoc(collection(db, "posts", props.postId, "comments"), {
+      avatar: user.photoUrl,
+      text: comment,
+      timestamp: serverTimestamp(),
+      username: user.displayName,
+    });
+    setComment("");
+  };
+  
   return (
     <div className={styles.post}>
       <div className={styles.post_avatar}>
@@ -47,6 +63,29 @@ const Post: FC<PROPS> = (props) => {
             <img src={props.image} alt="tweet" />
           </div>
         )}
+
+        <form onSubmit={newComment}>
+          <div className={styles.post_form}>
+            <input
+              className={styles.post_input}
+              type="text"
+              placeholder="Type new comment..."
+              value={comment}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setComment(e.target.value)
+              }
+            />
+            <button
+              disabled={!comment}
+              className={
+                comment ? styles.post_button : styles.post_buttonDisable
+              }
+              type="submit"
+            >
+              <SendIcon className={styles.post_sendIcon} />
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
